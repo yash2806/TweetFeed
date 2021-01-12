@@ -4,6 +4,8 @@ import numpy as np
 import re
 from time import sleep
 from credentials import *
+from datetime import date 
+from datetime import timedelta 
 
 #Authenticate to twitter
 auth = tweepy.OAuthHandler(consumer_key,consumer_secret_key)
@@ -15,25 +17,31 @@ api = tweepy.API(auth,wait_on_rate_limit=True)
 def getHashTags(tweet):
     hashArr = re.findall(r"#(\w+)",tweet)
     return hashArr
+
 def tweetFunc(name,tagName):
+
+    today = date.today()  
+    yesterday = today - timedelta(days = 2) 
+
     friendsTweet = []
     tweetID = []
     tagName = tagName.lower()
     for follower in api.friends(screen_name = name):
         userID = follower.screen_name
         tweets = tweepy.Cursor(api.user_timeline,screen_name=userID,include_rts=False,tweet_mode='extended').items()
-        tweets_arr = [[tweet.user.screen_name, tweet.full_text, tweet.id] for tweet in tweets]
-        tweet_df = pd.DataFrame(data=tweets_arr,columns=['User','Tweet','ID'])
+        tweets_arr = [[tweet.user.screen_name, tweet.full_text, tweet.id,tweet.created_at] for tweet in tweets]        
+        tweet_df = pd.DataFrame(data=tweets_arr,columns=['User','Tweet','ID','Time'])
         for i in range(0,len(tweet_df['Tweet'])):
-            hashArr = getHashTags(tweet_df.iloc[i,1])
-            hashArr = [x.lower() for x in hashArr]
-            t_id = tweet_df.iloc[i,2]
-            if t_id not in tweetID:    
-                tweetID.append(t_id)
+            tweet_date = date(tweet_df.iloc[i,3].year,tweet_df.iloc[i,3].month,tweet_df.iloc[i,3].day) 
+            if tweet_date >= yesterday:
+                hashArr = getHashTags(tweet_df.iloc[i,1])
+                hashArr = [x.lower() for x in hashArr]
+                t_id = tweet_df.iloc[i,2]
                 if tagName in hashArr:
-                    friendsTweet.append([tweet_df.iloc[i,0],tweet_df.iloc[i,1]])  
+                    friendsTweet.append([tweet_df.iloc[i,0],tweet_df.iloc[i,1]])                      
+            else:
+                break                          
                 
-    #df = pd.DataFrame(data = friendsTweet,columns=['ID','UserName','Time','Tweet'])
     return friendsTweet
 
 def retrieve_last_id(file_name):
@@ -61,15 +69,18 @@ def feed_tweets():
         for tagName in hashArr:
             tweetsPerTag = tweetFunc(userName,tagName)
             #totalTweets.append([tagName,tweetsPerTag])
-            for tweet in tweetsPerTag:
-                x = ' '.join([str(item) for item in tweet])
+            for i in range(0,len(tweetsPerTag)): 
+                tweet = tweetsPerTag[i][1]
+                name = tweetsPerTag[i][0]
+                tweet = ' '.join(re.sub("(@[A-Za-z0–9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)"," ",tweet).split())
+                x = [name,'-',tweet]
                 try:
-                    api.update_status(' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)"," ",x).split())+" "+"@"+mention.user.screen_name,mention.id)
+                    api.update_status(' '.join(x)+" "+"@"+mention.user.screen_name,mention.id)
+                    sleep(30)
                 except tweepy.TweepError as e:
                     print(e.reason)
-
 
 if __name__ == "__main__":
     while True:
         feed_tweets()
-        sleep(10)
+        sleep(90)
