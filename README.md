@@ -11,5 +11,9 @@ python3 TweetFeed.py
 ```
 * Note : If Developer Module crashes, please check your Twitter Developer Access Token and API Key in the credentials.py
 
+# Proposed Architecture Design
+
+![](https://github.com/yash2806/TweetFeed/blob/main/DOCS/Architecture%20Diagram.png "Overall Idea")
+
 
 
