@@ -21,7 +21,7 @@ def getHashTags(tweet):
 def tweetFunc(name,tagName):
 
     today = date.today()  
-    yesterday = today - timedelta(days = 2) 
+    yesterday = today - timedelta(days = 5) 
 
     friendsTweet = []
     tweetID = []
